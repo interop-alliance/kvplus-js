@@ -11,6 +11,7 @@ Specs for a simple Key/Value (plus Secondary Indexes) store API, for Node.js/Jav
   * [`del()`](#del)
 * **Secondary Index API**
   * [`createIndex()`](#createindex)
+  * [`findBy()`](#findby)
 
 ### Creating a Store Instance
 

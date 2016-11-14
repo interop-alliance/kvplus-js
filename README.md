@@ -3,11 +3,51 @@ Specs for a simple Key/Value (plus Secondary Indexes) store API, for Node.js/Jav
 
 ## Contents
 
-1. `get()`
-2. `put()`
-3. `del()`
+* [Creating a Store Instance](#creating-a-store-instance)
+* **CRUD API**
+  * [`exists()`](#exists)
+  * [`get()`](#get)
+  * [`put()`](#put)
+  * [`del()`](#del)
+* **Secondary Index API**
+  * [`createIndex()`](#createindex)
 
-### CRUD
+### Creating a Store Instance
+
+Usage:
+
+```js
+var options = {
+  path: './db'
+}
+var store = new KVPlusStore(options)
+```
+
+##### Constructor Options
+
+* `path` - (Optional) For filesystem based stores, specifies the directory
+  where the store will be created.
+
+### CRUD API
+
+#### exists()
+
+`Promise<Boolean> exists (string collectionName, string key)`
+
+Checks whether an object exists in the collection, for a given key.
+
+Usage:
+
+```js
+store.exists('users', 'u1')
+  .then(found => {
+    if (found) {
+      // user exists!
+    } else {
+      // not found
+    }
+  })
+```
 
 #### get()
 
@@ -47,3 +87,35 @@ store.put('users', 'u2', { name: 'Alice' })
 Attempts to delete an object for a given collection and key. If the object
 existed and the delete succeeded, resolves to `true`. If the object did not
 exist, resolves to `false`.
+
+Usage:
+
+```js
+store.del('users', 'u2')
+  .then(() => {
+    // user deleted. In this case, we don't care about whether the user actually
+    // existed, so we're not going to check the boolean result of the operation
+  })
+```
+
+## Secondary Index API
+
+### createIndex()
+
+Usage:
+
+```js
+store.createIndex('users', 'email')
+  .then(() => {
+    // secondary index created on the 'email' property of users objects
+  })
+```
+
+#### Questions/Design Decisions
+
+* [ ] Should there be a `list(collectionName)` api method? issue #1
+* [ ] Should there be a `createCollection(name)` api method, or do we want to
+  limit the backends/implementations to lazy-initializing collections in the
+  course of other operations? issue #2
+* [ ] Should there be a way to list all collections? (created explicitly or
+  lazily) issue #3

@@ -1,7 +1,7 @@
 # kvplus-js
 Specs for a simple Key/Value (plus Secondary Indexes) store API, for Node.js/Javascript
 
-## Contents
+### Contents
 
 * [Creating a Store Instance](#creating-a-store-instance)
 * **CRUD API**
@@ -102,12 +102,35 @@ store.del('users', 'u2')
 
 ### createIndex()
 
+`Promise<> createIndex (string collectionName, string property)`
+
+Creates a secondary index on a given object property, and enables subsequent
+secondary queries on that field. Should be idempotent (if the index already
+exists, results in no-op).
+
 Usage:
 
 ```js
 store.createIndex('users', 'email')
   .then(() => {
-    // secondary index created on the 'email' property of users objects
+    // secondary index created on the 'email' property of users objects.
+    // you can now perform findBy() queries on this property
+  })
+```
+
+### findBy()
+
+`Promise<Array<Object>> findBy (string collectionName, string property, string value)`
+
+Performs a secondary index query (exact matches only, for now) on a given
+existing index and value.
+
+Usage:
+
+```js
+store.findBy('users', 'email', 'alice@example.com')
+  .then(results => {
+    console.log(results)  // -> [ { name: 'Alice', email: 'alice@example.com'} ]
   })
 ```
 

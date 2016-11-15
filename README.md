@@ -3,31 +3,75 @@ Specs for a simple Key/Value (plus Secondary Indexes) store API, for Node.js/Jav
 
 ### Contents
 
-* [Creating a Store Instance](#creating-a-store-instance)
-* **CRUD API**
+* [Motivation](#motivation)
+* [Store API](#store-api)
+  * [Creating a Store Instance](#creating-a-store-instance)
+  * [Initializing a Collection](#initializing-a-collection)
+* [CRUD API](#crud-api)
   * [`exists()`](#exists)
   * [`get()`](#get)
   * [`put()`](#put)
   * [`del()`](#del)
-* **Secondary Index API**
+* [Secondary Index API](#secondary-index-api)
   * [`createIndex()`](#createindex)
   * [`findBy()`](#findby)
+* [Implementations](#implementations)
 
-### Creating a Store Instance
+### Motivation
+
+This K/V API was created to provide a pluggable persistence interface for the
+[`oidc-op`](https://github.com/anvilresearch/oidc-op) OpenID Connect Identity
+Provider library (to store user accounts, client registrations, access tokens,
+and so on).
+
+### Store API
+
+#### Creating a Store Instance
 
 Usage:
 
 ```js
 var options = {
-  path: './db'
+  path: './db',
+  serialize: (obj) => { return JSON.stringify(obj) }
 }
 var store = new KVPlusStore(options)
 ```
 
 ##### Constructor Options
 
-* `path` - (Optional) For filesystem based stores, specifies the directory
-  where the store will be created.
+* `path` - (string) For filesystem based stores, specifies the directory
+  where the store will be created. Optional.
+* `serialize` - (Function) If storing objects other than strings, provide a
+  serialization function that will turn an object into a string representation.
+  Can also be provided for the whole store (in the store constructor), or
+  overridden for each collection.
+
+### Initializing a Collection
+
+`Promise<> createCollection (string collectionName, Object options = {})`
+
+Creates/initializes a collection in the store. This operation should be
+*idempotent* -- if the collection already exists, it should result in a no-op.
+Think of it as likely to run each time an app server starts up (instead of only
+once, at install time or in a database migration).
+
+##### Collection options
+
+* `serialize` - (Function) If storing objects other than strings, provide a
+  serialization function that will turn an object into a string representation.
+  Can also be provided for the whole store (in the store constructor), or
+  overridden for each collection.
+
+Usage:
+
+```js
+let serialize = (obj) => { return JSON.stringify(obj) }
+store.createCollection('users', { serialize })
+  .then(() => {
+    // collection created/initialized
+  })
+```
 
 ### CRUD API
 
@@ -99,9 +143,9 @@ store.del('users', 'u2')
   })
 ```
 
-## Secondary Index API
+### Secondary Index API
 
-### createIndex()
+#### createIndex()
 
 `Promise<> createIndex (string collectionName, string property)`
 
@@ -119,7 +163,7 @@ store.createIndex('users', 'email')
   })
 ```
 
-### findBy()
+#### findBy()
 
 `Promise<Array<Object>> findBy (string collectionName, string property, string value)`
 
@@ -135,11 +179,18 @@ store.findBy('users', 'email', 'alice@example.com')
   })
 ```
 
+### Implementations
+
+The following are in-progress implementations.
+
+* In-memory KVPlus store. (For reference / testing)
+* Simple JSON-based KVPlus store (persisted on filesystem)
+* [`kvplus-rdflib`]() - K/V Plus API interface to serialize objects to RDF
+  (Turtle) files in a directory (separate dir per collection), for use with
+  [`node-solid-server`](https://github.com/solid/node-solid-server)
+
 #### Questions/Design Decisions
 
 * [ ] Should there be a `list(collectionName)` api method? issue #1
-* [ ] Should there be a `createCollection(name)` api method, or do we want to
-  limit the backends/implementations to lazy-initializing collections in the
-  course of other operations? issue #2
 * [ ] Should there be a way to list all collections? (created explicitly or
   lazily) issue #3

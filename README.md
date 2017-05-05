@@ -11,7 +11,7 @@ Specs for a simple Key/Value (plus Secondary Indexes) store API, for Node.js/Jav
   * [`exists()`](#exists)
   * [`get()`](#get)
   * [`put()`](#put)
-  * [`del()`](#del)
+  * [`remove()`](#remove)
 * [Secondary Index API](#secondary-index-api)
   * [`createIndex()`](#createindex)
   * [`findBy()`](#findby)
@@ -125,18 +125,18 @@ store.put('users', 'u2', { name: 'Alice' })
   })
 ```
 
-### del()
+### remove()
 
-`Promise<Boolean> del (string collectionName, string key)`
+`Promise<Boolean> remove (string collectionName, string key)`
 
-Attempts to delete an object for a given collection and key. If the object
+Attempts to remove an object for a given collection and key. If the object
 existed and the delete succeeded, resolves to `true`. If the object did not
 exist, resolves to `false`.
 
 Usage:
 
 ```js
-store.del('users', 'u2')
+store.remove('users', 'u2')
   .then(() => {
     // user deleted. In this case, we don't care about whether the user actually
     // existed, so we're not going to check the boolean result of the operation

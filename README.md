@@ -1,28 +1,52 @@
 # kvplus-js
 Specs for a simple Key/Value (plus Secondary Indexes) store API, for Node.js/Javascript
 
+**Current Spec version:** `v.0.1.0` (see [CHANGELOG.md](CHANGELOG.md))
+
 ### Contents
 
 * [Motivation](#motivation)
 * [Store API](#store-api)
   * [Creating a Store Instance](#creating-a-store-instance)
   * [Initializing a Collection](#initializing-a-collection)
-* [CRUD API](#crud-api)
+* [Store CRUD API](#store-crud-api)
+  * [`list()`](#list)
   * [`exists()`](#exists)
   * [`get()`](#get)
   * [`put()`](#put)
   * [`remove()`](#remove)
-* [Secondary Index API](#secondary-index-api)
+* [Store Secondary Index API](#store-secondary-index-api)
   * [`createIndex()`](#createindex)
   * [`findBy()`](#findby)
 * [Implementations](#implementations)
 
 ### Motivation
 
-This K/V API was created to provide a pluggable persistence interface for the
-[`oidc-op`](https://github.com/anvilresearch/oidc-op) OpenID Connect Identity
-Provider library (to store user accounts, client registrations, access tokens,
-and so on).
+This K/V API was initially created to provide a pluggable persistence interface
+for the [`oidc-op`](https://github.com/anvilresearch/oidc-op) OpenID Connect
+Identity Provider library (to store user accounts, client registrations, access
+tokens, and so on).
+
+#### Why not just use [`abstract-blob-store`](https://github.com/maxogden/abstract-blob-store)?
+
+There are several design motivations for K/V Plus and differences from the
+Abstract Blob Store (ABS) API:
+
+1. **Collections.** ABS (like
+  [`leveldown`](https://github.com/rvagg/abstract-leveldown)) has a flat
+  keyspace. We explicitly wanted to organize keys in bucket-like named
+  Collections.
+2. **API for reading/writing smaller objects.** ABS is designed for reading and
+  writing potentially large binary objects, hence its interface is stream-based.
+  However, for most small objects (and JSON documents), read and write streams
+  is overkill, and a Promise-based API makes more sense.
+3. **Listing keys.** Key/Value stores are great, but being able to list the keys
+  in a given collection is incredibly important (just ask long-time
+  [Riak](https://github.com/basho/riak/) users).
+4. **Secondary Indexes.** Similarly, the addition of simple secondary index
+  capability (for example, being able to find users by email in addition to
+  fetching them by user id) makes K/V stores significantly more useful for most
+  dev purposes.
 
 ### Store API
 
@@ -31,17 +55,18 @@ and so on).
 Usage:
 
 ```js
-var options = {
+const options = {
   path: './db',
   serialize: (obj) => { return JSON.stringify(obj) }
 }
-var store = new KVPlusStore(options)
+
+const store = new KVPlusStore(options)
 ```
 
 ##### Constructor Options
 
 * `path` - (string) For filesystem based stores, specifies the directory
-  where the store will be created. Optional.
+  where the store will be created. *Optional.*
 * `serialize` - (Function) If storing objects other than strings, provide a
   serialization function that will turn an object into a string representation.
   Can also be provided for the whole store (in the store constructor), or
@@ -49,10 +74,14 @@ var store = new KVPlusStore(options)
 
 ### Initializing a Collection
 
-`Promise<> createCollection (string collectionName, Object options = {})`
+`Promise createCollection (string collectionName, Object options = {})`
 
-Creates/initializes a collection in the store. This operation should be
-*idempotent* -- if the collection already exists, it should result in a no-op.
+Creates/initializes a collection in the store. If the backend storage mechanism
+does not have any need for initializing a collection (such as an in-memory
+store), the implementation should do something like `return Promise.resolve()`.
+
+*Important:* This operation should be *idempotent* -- if the collection already
+exists, it should result in a no-op.
 Think of it as likely to run each time an app server starts up (instead of only
 once, at install time or in a database migration).
 
@@ -67,17 +96,38 @@ Usage:
 
 ```js
 let serialize = (obj) => { return JSON.stringify(obj) }
+
 store.createCollection('users', { serialize })
   .then(() => {
     // collection created/initialized
   })
 ```
 
-### CRUD API
+### Store CRUD API
+
+#### list()
+
+`Promise<Array<string>> list (string collectionName, Object options = {})`
+
+Returns a list of keys in a given collection.
+
+Usage:
+
+```js
+store.put('users', 'user1', { name: 'Bob' })
+
+  .then(() => store.put('users', 'user2', { name: 'Alice' }))
+
+  .then(() => store.list('users'))
+
+  .then(result => {
+    // result -> [ 'user1', 'user2' ]
+  })
+```
 
 #### exists()
 
-`Promise<Boolean> exists (string collectionName, string key)`
+`Promise<boolean> exists (string collectionName, string key)`
 
 Checks whether an object exists in the collection, for a given key.
 
@@ -96,7 +146,7 @@ store.exists('users', 'u1')
 
 #### get()
 
-`Promise<Object> get (string collectionName, string key)`
+`Promise<Object> get (string collectionName, string key, Object options = {})`
 
 Retrieves the serialized object from the store, from the given collection.
 
@@ -111,15 +161,18 @@ store.get('users', 'u1')
 
 #### put()
 
-`Promise<Object> put (string collectionName, string key, Object data)`
+`Promise<Object> put (string collectionName, string key, Object data, Object options = {})`
 
-Writes an object to the store, and returns the object that was written. (If an
-object already exists for that key, in that collection, it gets overwritten.)
+Writes an object to the store, and returns the object that was written. Note:
+Serves both as an Insert and an Update operation (if an object already exists
+for that key, in that collection, it gets overwritten.)
 
 Usage:
 
 ```js
-store.put('users', 'u2', { name: 'Alice' })
+let user = { name: 'Alice' }
+
+store.put('users', 'u2', user)
   .then(storedUser => {
     assert(storedUser.name === 'Alice')
   })
@@ -143,11 +196,11 @@ store.remove('users', 'u2')
   })
 ```
 
-### Secondary Index API
+### Store Secondary Index API
 
 #### createIndex()
 
-`Promise<> createIndex (string collectionName, string property)`
+`Promise createIndex (string collectionName, string property, Object options = {})`
 
 Creates a secondary index on a given object property, and enables subsequent
 secondary queries on that field. Should be idempotent (if the index already
@@ -187,9 +240,9 @@ store.findBy('users', 'email', 'alice@example.com')
 The following are in-progress implementations.
 
 * In-memory KVPlus store. (For reference / testing)
+* LocalStorage KVPlus store, for in-browser use.
 
 #### Questions/Design Decisions
 
-* [ ] Should there be a `list(collectionName)` api method? issue #1
 * [ ] Should there be a way to list all collections? (created explicitly or
   lazily) issue #3

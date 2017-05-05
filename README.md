@@ -181,13 +181,12 @@ store.findBy('users', 'email', 'alice@example.com')
 
 ### Implementations
 
+* [`kvplus-files`](https://github.com/solid/kvplus-files) Simple file-based
+  JSON store.
+
 The following are in-progress implementations.
 
 * In-memory KVPlus store. (For reference / testing)
-* Simple JSON-based KVPlus store (persisted on filesystem)
-* [`kvplus-rdflib`]() - K/V Plus API interface to serialize objects to RDF
-  (Turtle) files in a directory (separate dir per collection), for use with
-  [`node-solid-server`](https://github.com/solid/node-solid-server)
 
 #### Questions/Design Decisions
 

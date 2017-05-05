@@ -11,7 +11,7 @@ Specs for a simple Key/Value (plus Secondary Indexes) store API, for Node.js/Jav
   * [`exists()`](#exists)
   * [`get()`](#get)
   * [`put()`](#put)
-  * [`del()`](#del)
+  * [`remove()`](#remove)
 * [Secondary Index API](#secondary-index-api)
   * [`createIndex()`](#createindex)
   * [`findBy()`](#findby)
@@ -125,18 +125,18 @@ store.put('users', 'u2', { name: 'Alice' })
   })
 ```
 
-### del()
+### remove()
 
-`Promise<Boolean> del (string collectionName, string key)`
+`Promise<Boolean> remove (string collectionName, string key)`
 
-Attempts to delete an object for a given collection and key. If the object
+Attempts to remove an object for a given collection and key. If the object
 existed and the delete succeeded, resolves to `true`. If the object did not
 exist, resolves to `false`.
 
 Usage:
 
 ```js
-store.del('users', 'u2')
+store.remove('users', 'u2')
   .then(() => {
     // user deleted. In this case, we don't care about whether the user actually
     // existed, so we're not going to check the boolean result of the operation
@@ -181,13 +181,12 @@ store.findBy('users', 'email', 'alice@example.com')
 
 ### Implementations
 
+* [`kvplus-files`](https://github.com/solid/kvplus-files) Simple file-based
+  JSON store.
+
 The following are in-progress implementations.
 
 * In-memory KVPlus store. (For reference / testing)
-* Simple JSON-based KVPlus store (persisted on filesystem)
-* [`kvplus-rdflib`]() - K/V Plus API interface to serialize objects to RDF
-  (Turtle) files in a directory (separate dir per collection), for use with
-  [`node-solid-server`](https://github.com/solid/node-solid-server)
 
 #### Questions/Design Decisions
 
